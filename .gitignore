@@ -11,4 +11,7 @@ build/
 *.wav
 *.png
 *.jpg
+*.jpeg
 .DS_Store
+.idea/
+.vscode/
