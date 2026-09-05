@@ -21,9 +21,21 @@ input, select, button {
   border: 0;
   font-size: 16px;
 }
+input:focus-visible, select:focus-visible, button:focus-visible {
+  outline: 2px solid #38bdf8;
+  outline-offset: 2px;
+}
 button {
   cursor: pointer;
   font-weight: bold;
+  background: #38bdf8;
+  color: #0f172a;
+  transition: opacity 0.15s ease;
+}
+button:hover:not(:disabled) { opacity: 0.9; }
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 pre {
   white-space: pre-wrap;
@@ -32,4 +44,9 @@ pre {
   background: #020617;
   border-radius: 12px;
   min-height: 180px;
+}
+
+@media (max-width: 600px) {
+  .container { margin: 24px auto; padding: 20px; }
+  h1 { font-size: 30px; }
 }
