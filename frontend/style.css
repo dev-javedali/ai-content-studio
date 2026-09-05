@@ -1,0 +1,35 @@
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #0f172a;
+  color: #f8fafc;
+}
+.container {
+  max-width: 800px;
+  margin: 70px auto;
+  padding: 30px;
+  background: #1e293b;
+  border-radius: 18px;
+}
+h1 { font-size: 42px; margin-bottom: 8px; }
+input, select, button {
+  width: 100%;
+  padding: 14px;
+  margin-top: 14px;
+  border-radius: 10px;
+  border: 0;
+  font-size: 16px;
+}
+button {
+  cursor: pointer;
+  font-weight: bold;
+}
+pre {
+  white-space: pre-wrap;
+  margin-top: 25px;
+  padding: 20px;
+  background: #020617;
+  border-radius: 12px;
+  min-height: 180px;
+}

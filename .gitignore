@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+.env
+.venv/
+venv/
+node_modules/
+dist/
+build/
+*.mp4
+*.mov
+*.wav
+*.png
+*.jpg
+.DS_Store

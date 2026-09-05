@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Content Studio</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="container">
+    <h1>AI Content Studio</h1>
+    <p>Create scripts for Shorts, Reels and YouTube videos.</p>
+
+    <input id="topic" placeholder="Enter your video topic">
+    <select id="language">
+      <option>English</option>
+      <option>Urdu</option>
+      <option>Roman Urdu</option>
+    </select>
+    <input id="duration" type="number" value="60" min="15" max="600">
+
+    <button onclick="generateScript()">Generate Script</button>
+
+    <pre id="result">Your generated script will appear here...</pre>
+  </main>
+
+<script>
+async function generateScript() {
+  const topic = document.getElementById("topic").value;
+  const language = document.getElementById("language").value;
+  const duration = Number(document.getElementById("duration").value);
+  const result = document.getElementById("result");
+
+  result.textContent = "Generating...";
+
+  try {
+    const response = await fetch("http://127.0.0.1:8000/generate-script", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({topic, language, duration})
+    });
+
+    const data = await response.json();
+    result.textContent = data.script || data.error || "Something went wrong.";
+  } catch (error) {
+    result.textContent = "Backend is not running. Start FastAPI first.";
+  }
+}
+</script>
+</body>
+</html>
