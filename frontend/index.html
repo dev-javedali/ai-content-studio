@@ -19,33 +19,63 @@
     </select>
     <input id="duration" type="number" value="60" min="15" max="600">
 
-    <button onclick="generateScript()">Generate Script</button>
+    <button id="generate-btn" type="button">Generate Script</button>
 
-    <pre id="result">Your generated script will appear here...</pre>
+    <pre id="result" aria-live="polite">Your generated script will appear here...</pre>
   </main>
 
 <script>
-async function generateScript() {
-  const topic = document.getElementById("topic").value;
-  const language = document.getElementById("language").value;
-  const duration = Number(document.getElementById("duration").value);
-  const result = document.getElementById("result");
+const API_URL = "http://127.0.0.1:8000/generate-script";
 
-  result.textContent = "Generating...";
+const topicInput = document.getElementById("topic");
+const languageSelect = document.getElementById("language");
+const durationInput = document.getElementById("duration");
+const resultEl = document.getElementById("result");
+const generateBtn = document.getElementById("generate-btn");
+
+function extractErrorMessage(data) {
+  if (Array.isArray(data?.detail)) {
+    return data.detail.map((d) => d.msg).join(", ");
+  }
+  return data?.detail || data?.error || "Something went wrong.";
+}
+
+async function generateScript() {
+  const topic = topicInput.value.trim();
+  const language = languageSelect.value;
+  const duration = Number(durationInput.value);
+
+  if (!topic) {
+    resultEl.textContent = "Please enter a topic first.";
+    topicInput.focus();
+    return;
+  }
+
+  generateBtn.disabled = true;
+  resultEl.textContent = "Generating...";
 
   try {
-    const response = await fetch("http://127.0.0.1:8000/generate-script", {
+    const response = await fetch(API_URL, {
       method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({topic, language, duration})
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ topic, language, duration })
     });
 
     const data = await response.json();
-    result.textContent = data.script || data.error || "Something went wrong.";
+    resultEl.textContent = response.ok
+      ? data.script
+      : extractErrorMessage(data);
   } catch (error) {
-    result.textContent = "Backend is not running. Start FastAPI first.";
+    resultEl.textContent = "Backend is not running. Start FastAPI first.";
+  } finally {
+    generateBtn.disabled = false;
   }
 }
+
+generateBtn.addEventListener("click", generateScript);
+topicInput.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") generateScript();
+});
 </script>
 </body>
 </html>
