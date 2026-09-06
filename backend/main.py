@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, field_validator
 
-load_dotenv()
+dotenv_found = load_dotenv()
 
 app = FastAPI(title="AI Content Studio API", version="1.1.0")
 
@@ -21,6 +21,15 @@ app.add_middleware(
 )
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
+print(f"[startup] .env file found: {dotenv_found}")
+print(f"[startup] OPENAI_API_KEY loaded: {bool(OPENAI_API_KEY)}")
+if not dotenv_found:
+    print(
+        "[startup] No .env file found in the current working directory. "
+        "Make sure backend/.env exists and you're running uvicorn from "
+        "inside the backend/ folder."
+    )
 
 
 class ScriptRequest(BaseModel):
@@ -107,6 +116,17 @@ def build_ai_script(topic: str, language: str, duration: int) -> Optional[str]:
 @app.get("/")
 def root():
     return {"message": "AI Content Studio API is running"}
+
+
+@app.get("/status")
+def status():
+    """Diagnostic endpoint — never returns the key itself, just whether
+    one was detected, so setup problems are visible without digging
+    through server logs."""
+    return {
+        "openai_key_detected": bool(OPENAI_API_KEY),
+        "openai_key_length": len(OPENAI_API_KEY) if OPENAI_API_KEY else 0,
+    }
 
 
 @app.post("/generate-script")
