@@ -1,8 +1,14 @@
+import os
+from typing import Optional
+
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, field_validator
 
-app = FastAPI(title="AI Content Studio API", version="1.0.0")
+load_dotenv()
+
+app = FastAPI(title="AI Content Studio API", version="1.1.0")
 
 # Frontend is opened directly from the filesystem (or a dev server on a
 # different port), so without CORS the browser blocks every request and
@@ -13,6 +19,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 
 class ScriptRequest(BaseModel):
@@ -29,6 +37,58 @@ class ScriptRequest(BaseModel):
         return value
 
 
+def build_template_script(topic: str, language: str, duration: int) -> str:
+    """Deterministic fallback used when no OpenAI key is configured, or
+    when the OpenAI call fails for any reason."""
+    return (
+        f"HOOK: Did you know this about {topic}?\n\n"
+        f"BODY: In this {duration}-second {language} video, "
+        f"we explain the most important facts about {topic} in a simple and engaging way.\n\n"
+        "CTA: Follow for more useful content."
+    )
+
+
+def build_ai_script(topic: str, language: str, duration: int) -> Optional[str]:
+    """Try to generate a script with OpenAI. Returns None on any failure
+    (missing key, network error, bad response) so the caller can fall
+    back to the template generator instead of crashing the request."""
+    if not OPENAI_API_KEY:
+        return None
+
+    try:
+        from openai import OpenAI
+
+        client = OpenAI(api_key=OPENAI_API_KEY)
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You write short, punchy scripts for short-form video "
+                        "(Shorts/Reels/TikTok). Structure every response as "
+                        "HOOK, BODY, and CTA on separate lines, matching the "
+                        "requested duration and language."
+                    ),
+                },
+                {
+                    "role": "user",
+                    "content": (
+                        f"Write a {duration}-second video script in {language} "
+                        f"about: {topic}"
+                    ),
+                },
+            ],
+            max_tokens=400,
+            timeout=15,
+        )
+        content = response.choices[0].message.content
+        return content.strip() if content else None
+    except Exception as exc:  # any failure should fall back, never crash the request
+        print(f"[generate-script] OpenAI generation failed, using template: {exc}")
+        return None
+
+
 @app.get("/")
 def root():
     return {"message": "AI Content Studio API is running"}
@@ -38,15 +98,13 @@ def root():
 def generate_script(req: ScriptRequest):
     topic = req.topic
 
-    script = (
-        f"HOOK: Did you know this about {topic}?\n\n"
-        f"BODY: In this {req.duration}-second {req.language} video, "
-        f"we explain the most important facts about {topic} in a simple and engaging way.\n\n"
-        "CTA: Follow for more useful content."
-    )
+    ai_script = build_ai_script(topic, req.language, req.duration)
+    script = ai_script or build_template_script(topic, req.language, req.duration)
+
     return {
         "topic": topic,
         "language": req.language,
         "duration": req.duration,
-        "script": script
+        "script": script,
+        "source": "ai" if ai_script else "template",
     }
