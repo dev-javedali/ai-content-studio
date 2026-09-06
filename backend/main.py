@@ -59,6 +59,14 @@ def build_ai_script(topic: str, language: str, duration: int) -> Optional[str]:
         from openai import OpenAI
 
         client = OpenAI(api_key=OPENAI_API_KEY)
+
+        # A flat token budget cut long scripts off mid-sentence: 400 tokens
+        # is fine for a 60s script (~150 words) but nowhere near enough for
+        # a 600s one (~1500 words). Scale roughly with requested duration,
+        # capped so a single request can't run away in cost/latency.
+        estimated_tokens = int(duration * 4)  # ~150 wpm, ~1.3 tokens/word
+        max_tokens = max(200, min(estimated_tokens, 2000))
+
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
@@ -68,7 +76,9 @@ def build_ai_script(topic: str, language: str, duration: int) -> Optional[str]:
                         "You write short, punchy scripts for short-form video "
                         "(Shorts/Reels/TikTok). Structure every response as "
                         "HOOK, BODY, and CTA on separate lines, matching the "
-                        "requested duration and language."
+                        "requested duration and language. Reply in plain text "
+                        "only — no markdown, no asterisks, no headings, no "
+                        "code fences."
                     ),
                 },
                 {
@@ -79,11 +89,16 @@ def build_ai_script(topic: str, language: str, duration: int) -> Optional[str]:
                     ),
                 },
             ],
-            max_tokens=400,
+            max_tokens=max_tokens,
             timeout=15,
         )
         content = response.choices[0].message.content
-        return content.strip() if content else None
+        if not content:
+            return None
+
+        # Safety net for models that wrap output in a code fence anyway.
+        cleaned = content.strip().strip("`").strip()
+        return cleaned or None
     except Exception as exc:  # any failure should fall back, never crash the request
         print(f"[generate-script] OpenAI generation failed, using template: {exc}")
         return None
